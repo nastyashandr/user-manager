@@ -2,10 +2,14 @@ const { Pool } = require('pg');
 require('dotenv').config();
 
 const pool = new Pool({
-    user: process.env.DB_USER,
-    password: process.env.DB_PASSWORD,
-    host: process.env.DB_HOST,
-    database: process.env.DB_NAME,
+    user: 'postgre',
+    password: 'xTv0Nw35AcorKuFK7AiXFPBccXL3moHT',
+    host: 'dpg-d8lui7mgvqtc73cfb5q0-a.ohio-postgres.render.com',
+    database: 'user_manager_zr1g',
+    port: 5432,
+    ssl: {
+        rejectUnauthorized: false  // Обязательно для Render!
+    }
 });
 
 async function initDB() {
