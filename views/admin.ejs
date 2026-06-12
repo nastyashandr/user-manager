@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Management</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.1/css/all.min.css">
+    <style>
+        th, td { vertical-align: middle; }
+        .col-check { width: 40px; text-align: center; }
+    </style>
+</head>
+<body>
+
+<nav class="navbar navbar-dark bg-dark mb-4">
+    <div class="container-fluid">
+        <span class="navbar-brand mb-0">User Management</span>
+        <a href="/logout" class="btn btn-outline-light btn-sm">
+            <i class="fas fa-sign-out-alt me-1"></i>Logout
+        </a>
+    </div>
+</nav>
+
+<div class="container-fluid px-4" style="max-width:1400px">
+
+    <div class="mb-2 d-flex gap-2 align-items-center">
+        <button class="btn btn-danger btn-sm" id="blockBtn" disabled
+            data-bs-toggle="tooltip" title="Block selected">
+            <i class="fas fa-ban me-1"></i>Block
+        </button>
+        <button class="btn btn-success btn-sm" id="unblockBtn" disabled
+            data-bs-toggle="tooltip" title="Unblock selected">
+            <i class="fas fa-check-circle"></i>
+        </button>
+        <button class="btn btn-dark btn-sm" id="deleteBtn" disabled
+            data-bs-toggle="tooltip" title="Delete selected">
+            <i class="fas fa-trash-alt"></i>
+        </button>
+        <button class="btn btn-warning btn-sm" id="deleteUnverifiedBtn"
+            data-bs-toggle="tooltip" title="Delete all unverified users">
+            <i class="fas fa-user-slash"></i>
+        </button>
+        <span class="text-muted small ms-1" id="selectionInfo"></span>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-bordered table-hover bg-white mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th class="col-check">
+                        <input type="checkbox" id="selectAll" title="Select / Deselect all">
+                    </th>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Last Login</th>
+                    <th>Registered</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                <% if (!users.length) { %>
+                <tr><td colspan="6" class="text-center text-muted py-4">No users found</td></tr>
+                <% } %>
+                <% users.forEach(user => { %>
+                <tr>
+                    <td class="col-check">
+                        <input type="checkbox" class="userCheckbox" value="<%= user.id %>">
+                    </td>
+                    <td>
+                        <i class="fas fa-user-circle me-2 text-secondary"></i><%= user.name %>
+                    </td>
+                    <td>
+                        <i class="fas fa-envelope me-2 text-secondary"></i><%= user.email %>
+                    </td>
+                    <td class="text-nowrap">
+                        <% if (user.last_login) { %>
+                            <i class="far fa-clock me-1 text-secondary"></i><%= new Date(user.last_login).toLocaleString() %>
+                        <% } else { %>
+                            <span class="text-muted">—</span>
+                        <% } %>
+                    </td>
+                    <td class="text-nowrap">
+                        <i class="far fa-calendar-alt me-1 text-secondary"></i><%= new Date(user.created_at).toLocaleString() %>
+                    </td>
+                    <td>
+                        <% if (user.status === 'active') { %>
+                            <span class="badge bg-success"><i class="fas fa-check-circle me-1"></i>active</span>
+                        <% } else if (user.status === 'blocked') { %>
+                            <span class="badge bg-danger"><i class="fas fa-ban me-1"></i>blocked</span>
+                        <% } else { %>
+                            <span class="badge bg-secondary"><i class="fas fa-clock me-1"></i>unverified</span>
+                        <% } %>
+                    </td>
+                </tr>
+                <% }) %>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div id="toastContainer" class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index:9999"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js" integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI" crossorigin="anonymous"></script>
+<script>
+    document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(el => new bootstrap.Tooltip(el));
+
+    function showToast(message, type = 'danger') {
+        const id = 'toast_' + Date.now();
+        document.getElementById('toastContainer').insertAdjacentHTML('beforeend', `
+            <div id="${id}" class="toast align-items-center text-bg-${type} border-0" role="alert" aria-atomic="true">
+                <div class="d-flex">
+                    <div class="toast-body">${message}</div>
+                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                </div>
+            </div>`);
+        const el = document.getElementById(id);
+        new bootstrap.Toast(el, { delay: 4000 }).show();
+        el.addEventListener('hidden.bs.toast', () => el.remove());
+    }
+
+    function handleAuthError() {
+        window.location.href = '/login?message=' + encodeURIComponent('Your session has ended. Please log in again.');
+    }
+
+    const checkboxes = document.querySelectorAll('.userCheckbox');
+    const selectAll  = document.getElementById('selectAll');
+    const blockBtn   = document.getElementById('blockBtn');
+    const unblockBtn = document.getElementById('unblockBtn');
+    const deleteBtn  = document.getElementById('deleteBtn');
+    const deleteUnverifiedBtn = document.getElementById('deleteUnverifiedBtn');
+    const selectionInfo = document.getElementById('selectionInfo');
+
+    function updateButtons() {
+        const count = [...checkboxes].filter(cb => cb.checked).length;
+        blockBtn.disabled = unblockBtn.disabled = deleteBtn.disabled = count === 0;
+        selectionInfo.textContent = count ? `${count} selected` : '';
+    }
+
+    selectAll.addEventListener('change', () => {
+        checkboxes.forEach(cb => cb.checked = selectAll.checked);
+        selectAll.indeterminate = false;
+        updateButtons();
+    });
+
+    checkboxes.forEach(cb => cb.addEventListener('change', () => {
+        const checked = [...checkboxes].filter(cb => cb.checked).length;
+        selectAll.checked = checked === checkboxes.length;
+        selectAll.indeterminate = checked > 0 && checked < checkboxes.length;
+        updateButtons();
+    }));
+
+    async function action(url, ids) {
+        [blockBtn, unblockBtn, deleteBtn, deleteUnverifiedBtn].forEach(b => b.disabled = true);
+        try {
+            const res = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ids })
+            });
+            if (res.status === 401 || res.status === 410) return handleAuthError();
+            if (res.ok) location.reload();
+            else showToast((await res.json().catch(() => ({}))).error || 'Operation failed');
+        } catch {
+            showToast('Network error. Please try again.');
+        } finally {
+            updateButtons();
+        }
+    }
+
+    const getIds = () => [...checkboxes].filter(cb => cb.checked).map(cb => cb.value);
+
+    blockBtn.onclick   = () => action('/api/block',   getIds());
+    unblockBtn.onclick = () => action('/api/unblock', getIds());
+    deleteBtn.onclick  = () => action('/api/delete',  getIds());
+    deleteUnverifiedBtn.onclick = () => action('/api/delete-unverified', []);
+</script>
+</body>
+</html>
